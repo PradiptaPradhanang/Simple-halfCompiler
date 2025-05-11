@@ -1,0 +1,12 @@
+﻿  simple.cpp
+C:\Users\Pradipta\source\repos\simple\simple.cpp(48,17): error C3646: 'Data': unknown override specifier
+C:\Users\Pradipta\source\repos\simple\simple.cpp(48,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Users\Pradipta\source\repos\simple\simple.cpp(71,5): error C3861: 'AdvanceToken': identifier not found
+C:\Users\Pradipta\source\repos\simple\simple.cpp(78,16): error C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,17): error C3646: 'Ans': unknown override specifier
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Users\Pradipta\source\repos\simple\simple.cpp(102,14): error C3646: 'Vars': unknown override specifier
+C:\Users\Pradipta\source\repos\simple\simple.cpp(102,18): error C2143: syntax error: missing ',' before '['
+C:\Users\Pradipta\source\repos\simple\simple.cpp(102,20): error C2238: unexpected token(s) preceding ';'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(105,7): warning C4326: return type of 'main' should be 'int' instead of 'void'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(115,47): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
