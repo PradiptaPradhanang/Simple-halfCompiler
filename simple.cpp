@@ -33,38 +33,43 @@ enum TokenKind
 	TokenKind_Multiply,//*
 	TokenKind_Divide,// /
 	TokenKind_OpenBrace,// (
+	TokenKind_OpenCurlyBrace,// (
 	TokenKind_CloseBrace,// )
+	TokenKind_CloseCurlyBrace,// )
 	TokenKind_BitwiseAND, // &
 	TokenKind_BitwiseOR, // |
 	TokenKind_EqualEqual,// ==
-	TokenKind_BitwiseNot  // ~
+	TokenKind_BitwiseNot,  // ~
+	TokenKind_Return,
+	TokenKind_Func,
 };
 const char* TokenNames[] = {
-	"invalid", "Number", "Identifier", ",", "||", "&&", "String", "==", ";", "+", "-", "*", "/", "(", ")", "&", "|", "==", "~"
+	"invalid", "Number", "Identifier", ",", "||", "&&", "String", "==", ";", "+", "-", "*", "/", "(", "{", ")", "}", "&", "|", "==", "~", "return", "func"
 };
 
-enum ReturnKind
+enum ValueType
 {
 	ReturnKind_Int,
 	ReturnKind_Float,
 	Returnkind_Char
 
 };
-struct ReturnValue
+
+struct Value
 {
-	ReturnKind Kind;
+	ValueType Kind;
 	int Int;
 	double Float;
 	char Identifier[MAX_IDENTIFIER_SIZE];
-
 };
 
 struct Token
 {
 	TokenKind Kind;
 	int64_t IdentifierLen; // bettter than int because it is perfect for precision but only works for 64 bit ; also int has a different size on 32 bits
-	ReturnValue Data;
+	Value Data;
 };
+
 struct Tokenizer
 {
 	const char* Input;
@@ -95,7 +100,7 @@ bool SkipWhiteSpaces(Tokenizer* Tokenizer)
 }
 
 const char SingleCharTokenInput[] = {
- ',', '||', '&&', '==', ';', '+', '-', '*', '/', '(', ')', '&', '|', '==', '~'
+ ',', '||', '&&', '==', ';', '+', '-', '*', '/', '(', ')', '&', '|', '==', '~', '{', '}'
 };
 
 const TokenKind SingleCharTokenOutput[] =
@@ -114,7 +119,9 @@ const TokenKind SingleCharTokenOutput[] =
 	TokenKind_BitwiseAND, // &
 	TokenKind_BitwiseOR, // |
 	TokenKind_EqualEqual ,// ==
-	TokenKind_BitwiseNot  // ~
+	TokenKind_BitwiseNot,  // ~
+	TokenKind_OpenCurlyBrace,
+	TokenKind_CloseCurlyBrace,
 };
 
 struct DoubleCharToken {
@@ -173,7 +180,10 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 				return true;
 			}
 		}
+	}
 
+	for (int i = 0; i < ArrayCount(SingleCharTokenInput); ++i)
+	{
 		if (a == SingleCharTokenInput[i])
 		{
 			Token->Kind = SingleCharTokenOutput[i];
@@ -201,7 +211,7 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 		}
 		char* endptr1 = 0;
 		char* endptr2 = 0;
-		ReturnValue number;
+		Value number;
 		number.Float = strtod(str, &endptr1); //parse string to double 
 		number.Int = strtol(str, &endptr2, 10);// parse string to long int
 		number.Kind = endptr1 == endptr2 ? ReturnKind_Int : ReturnKind_Float;
@@ -219,6 +229,7 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 	}
 	if (isalnum(a) || a == '_')
 	{
+		Token->Kind = TokenKind_Identifier;
 		while (Tokenizer->Position < Tokenizer->Length)
 		{
 			a = Tokenizer->Input[Tokenizer->Position];
@@ -235,14 +246,22 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 				printf("too long identifier\n");
 				exit(1);
 			}
-			return true;
+		
 		}
-		printf("invalid character: %c\n", a);
-		exit(1);
 
-		return false;
+		if (strcmp(Token->Data.Identifier, "func") == 0)
+			Token->Kind = TokenKind_Func;
+		else if (strcmp(Token->Data.Identifier, "return") == 0)
+			Token->Kind = TokenKind_Return;
+
+		return true;
 
 	}
+
+	printf("invalid character: %c\n", a);
+	exit(1);
+
+	return false;
 }
 
 
@@ -300,12 +319,12 @@ char* ReadFile(const char* filepath)
 struct Variable
 {
 	char Name[MAX_IDENTIFIER_SIZE];
-	ReturnValue Value;
+	Value Value;
 };
 
 struct Memory
 {
-	ReturnValue Ans;
+	Value Ans;
 	Variable Vars[MAX_VARIABLE_COUNT];
 	int VariableCount;
 };
@@ -343,12 +362,14 @@ enum ExprKind
 
 	ExprKind_Number,
 	ExprKind_Identifier,
-	ExprKind_BuiltinFunc,
+	ExprKind_BuiltinFuncCall,
+	ExprKind_UserDefinedFuncCall,
 	ExprKind_String,
 	ExprKind_BinaryOperator,
 	ExprKind_UnaryOperator,
 	ExprKind_Assignment,
-
+	ExprKind_Function,
+	ExprKind_Return,
 };
 
 struct ExprNode;
@@ -360,7 +381,7 @@ struct FunctionArguments
 
 //function declaration
 ExprNode* ParseExpression(Parser* parser, bool start, int prec);
-
+bool CheckToken(Parser* parser, TokenKind kind);
 FunctionArguments ParseFunctionArguments(Parser* parser)
 {
 	FunctionArguments args;
@@ -374,11 +395,10 @@ FunctionArguments ParseFunctionArguments(Parser* parser)
 			printf("Too many parameters in the function\n");
 			exit(-1);
 		}
-		args.Args[args.Count] == ParseExpression(parser, true, -1);
+		args.Args[args.Count] = ParseExpression(parser, true, -1);
 		args.Count += 1;
 		if (!CheckToken(parser, TokenKind_Comma))
 			break;
-
 	}
 	return args;
 }
@@ -391,40 +411,81 @@ enum UnaryOperatorKind
 	UnaryOperator_BitwiseNot,
 };
 
+
 enum BinaryOperatorKind 
 {
 	BinaryOperator_Plus,
 	BinaryOperator_Minus,
 	BinaryOperator_Multiply,
 	BinaryOperator_Divide,
-	BinaryOperator_BitwiseAnd,
-	BinaryOperator_BitwiseOr,
+	BinaryOperator_BitwiseAND,
+	BinaryOperator_BitwiseOR,
+};
+
+struct FunctionParameters
+{
+	Token Params[MAX_ARGUMENT_COUNT];
+	int Count;
 };
 
 struct ExprNode
 {
 	ExprKind Kind;
 	Token SRCToken;
+	ExprNode* Next;
 	ExprNode* LeftNode;
 	ExprNode* RightNode;
+	ExprNode* FuncBodyFirstExpr;
 	BuiltInFunc Func;
 	FunctionArguments FuncArgs;
+	FunctionParameters FuncParams;
 	BinaryOperatorKind BinaryOperator;
 	UnaryOperatorKind UnaryOperator;
 };
 
-static ExprNode ExprNodeBuffer[8192];
-static int ExprNodePos = 0;
+const TokenKind UnaryOperatorStartInput[] = {
+	TokenKind_Plus,
+	TokenKind_Minus,
+};
+const UnaryOperatorKind UnaryOperatorStartOutput[] = {
+	UnaryOperator_Plus,
+	UnaryOperator_Minus,
+};
+const TokenKind UnaryOperatorInput[] = {
+	TokenKind_BitwiseNot,
+};
+const UnaryOperatorKind UnaryOperatorOutput[] = {
+	UnaryOperator_BitwiseNot,
+};
+const TokenKind BinaryOperatorInput[] = {
+	TokenKind_Plus,
+	TokenKind_Minus,
+	TokenKind_Multiply,
+	TokenKind_Divide,
+	TokenKind_AND,
+	TokenKind_BitwiseOR,
+};
+
+const BinaryOperatorKind BinaryOperatorOutput[] = {
+	BinaryOperator_Plus,
+	BinaryOperator_Minus,
+	BinaryOperator_Multiply,
+	BinaryOperator_Divide,
+	BinaryOperator_BitwiseAND,
+	BinaryOperator_BitwiseOR,
+};
+const int BinaryOperatorPrecedence[] = {
+	1,
+	1,
+	2,
+	2,
+	0,
+	0
+};
 
 ExprNode* ExprNodeCreate(ExprKind Kind, Token* token)
 {
-	if (ExprNodePos == ArrayCount(ExprNodeBuffer))
-	{
-		printf("Error: Not enough memory.");
-		exit(1);
-	}
-	ExprNode* node = &ExprNodeBuffer[ExprNodePos];
-	ExprNodePos += 1;
+	ExprNode* node = (ExprNode *)malloc(sizeof(ExprNode));
 	memset(node, 0, sizeof(*node));
 	node->Kind = Kind;
 	node->SRCToken = *token;
@@ -460,6 +521,7 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 		return expr;
 	}
 
+	//parse for variable
 	if (AcceptToken(parser, TokenKind_Identifier, &token))
 	{
 		// Token tmpToken = token;
@@ -478,39 +540,46 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 				}
 			}
 
-			if (!desc)
+			ExprNode* expr = nullptr;
+
+			if (desc)
 			{
-				printf("%s function is undefined\n", token.Data.Identifier);
-				exit(-1);
-			}
-			ExprNode* expr = ExprNodeCreate(ExprKind_BuiltinFunc, &token);
-			expr->FuncArgs = ParseFunctionArguments(parser);// for function 
-			expr->Func = func;
+				expr = ExprNodeCreate(ExprKind_BuiltinFuncCall, &token);
+				expr->FuncArgs = ParseFunctionArguments(parser);// for function 
+				expr->Func = func;
 
-			if (desc->ArgCount != -1 && desc->ArgCount != expr->FuncArgs.Count) {
-				printf("expected %d number of arguments but got %d arguments for function %s\n",
-					desc->ArgCount, expr->FuncArgs.Count, desc->Name);
-				exit(-1);
+				if (desc->ArgCount != -1 && desc->ArgCount != expr->FuncArgs.Count) {
+					printf("expected %d number of arguments but got %d arguments for function %s\n",
+						   desc->ArgCount, expr->FuncArgs.Count, desc->Name);
+					exit(-1);
+				}
+			}
+			else
+			{
+				expr = ExprNodeCreate(ExprKind_UserDefinedFuncCall, &token);
+				expr->FuncArgs = ParseFunctionArguments(parser);// for function 
+				expr->Func = func;
 			}
 
-			if (!CheckToken(parser, TokenKind_CloseBrace)) 
+			if (!CheckToken(parser, TokenKind_CloseBrace))
 			{
 				printf("expected close brace\n");
 				exit(-1);
 			}
+
 			return expr;
 		}
-		else {
+		else
+		{
 			ExprNode* expr = ExprNodeCreate(ExprKind_Identifier, &token);
 			return expr;
 		}
 
 
-
-
 	}
 
-	if (CheckToken(parser, TokenKind_OpenBrace)) {
+	if (CheckToken(parser, TokenKind_OpenBrace))
+	{
 		ExprNode* expr = ParseExpression(parser, true, -1);
 		if (!CheckToken(parser, TokenKind_CloseBrace)) {
 			printf("error: expected close brace\n");
@@ -518,18 +587,210 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 		}
 		return expr;
 	}
+
+	if (start) // for the first instance
+	{
+		for (int i = 0;i < ArrayCount(UnaryOperatorStartInput);i++)
+		{
+			if (AcceptToken(parser, UnaryOperatorStartInput[i], &token))
+			{
+				ExprNode* expr = ExprNodeCreate(ExprKind_UnaryOperator, &token);
+				expr->LeftNode = ParseSubexpression(parser, false);
+				expr->UnaryOperator = UnaryOperatorStartOutput[i];
+				return expr;
+			}
+		}
+	}
+
+	for (int i = 0; i < ArrayCount(UnaryOperatorInput); i++) 
+	{
+		if (AcceptToken(parser, UnaryOperatorInput[i], &token)) 
+		{
+			ExprNode* expr = ExprNodeCreate(ExprKind_UnaryOperator, &token);
+			expr->LeftNode = ParseSubexpression(parser, false);
+			expr->UnaryOperator = UnaryOperatorStartOutput[i];
+			return expr;
+		}
+	}
+	if (AcceptToken(parser, TokenKind_String, &token))
+	{  //parser will contain the current token that has been parsed and the toekn will contain the previous token
+		ExprNode* expr = ExprNodeCreate(ExprKind_String, &token);
+		return expr;
+	}
+
+	printf("error: expected operand\n");
+	exit(1);
 }
 
-ExprNode *ParseExpression(Parser* parser, bool start, int prev_prec)
+
+
+ExprNode *ParseExpression(Parser *parser, bool start, int prev_prec)
 {
+	if (start)
+	{
+		Token token = {};
+		if (AcceptToken(parser, TokenKind_Return, &token))
+		{
+			ExprNode *expr = ExprNodeCreate(ExprKind_Return, &token);
+			expr->LeftNode = ParseExpression(parser, true, -1);
+			return expr;
+		}
+	}
+
 	ExprNode* left = ParseSubexpression(parser, true);
-	ExprNode* expr;
+
+	while (Parsing(parser))
+	{
+		if (start) // if the start is not changed to false
+		{
+			Token token = {};
+			if (AcceptToken(parser, TokenKind_Equal, &token))
+			{
+				if (left->Kind != ExprKind_Identifier)
+				{
+					printf("The left side of the assignment should be identifier\n");
+					exit(-1); 
+				}
+				ExprNode* expr = ExprNodeCreate(ExprKind_Assignment, &token);
+				expr->LeftNode = left;
+				expr->RightNode = ParseExpression(parser, false, -1);
+				return expr;
+			}
+
+		}
+		start = false; // start flag is now off
+		int precedence = 0;
+		int binaryOp = -1;
+		for (int iter = 0; iter < ArrayCount(BinaryOperatorInput); ++iter) {
+			if (parser->Current.Kind == BinaryOperatorInput[iter])
+			{
+				precedence = BinaryOperatorPrecedence[iter];
+				binaryOp = iter;
+				break;
+			}
+		}
+		if (binaryOp == -1 || precedence <= prev_prec)
+			break;
+		ExprNode* expr = ExprNodeCreate(ExprKind_BinaryOperator, &parser->Current);
+		expr->LeftNode = left;
+		expr->BinaryOperator = BinaryOperatorOutput[binaryOp];
+
+		AdvanceToken(parser);
+
+		//recursion function 
+		expr->RightNode = ParseExpression(parser, false, precedence);
+		left = expr;
+
+	}
+
 	return  left ;
 }
 
-ExprNode* ParseRootExpression(Parser* parser) {
+
+ExprNode* ParseRootExpression(Parser* parser);
+
+ExprNode* ParseFunction(Parser* parser)
+{
+	Token token;
+	if (AcceptToken(parser, TokenKind_Identifier, &token))
+	{
+		ExprNode* expr = ExprNodeCreate(ExprKind_Function, &token);
+
+		if (!CheckToken(parser, TokenKind_OpenBrace))
+		{
+			printf("expected open brace");
+			exit(-1);
+		}
+
+		bool first_param = true;
+
+		while (1)
+		{
+			if (first_param)
+			{
+				if (!AcceptToken(parser, TokenKind_Identifier, &token))
+				{
+					break;
+				}
+				first_param = false;
+			}
+			else
+			{
+				if (!CheckToken(parser, TokenKind_Comma))
+				{
+					break;
+				}
+
+				if (!AcceptToken(parser, TokenKind_Identifier, &token))
+				{
+					printf("expected identifier\n");
+					exit(-1);
+				}
+			}
+
+			if (expr->FuncParams.Count == MAX_ARGUMENT_COUNT)
+			{
+				printf("too many paramnters\n");
+				exit(-1);
+			}
+
+			expr->FuncParams.Params[expr->FuncParams.Count] = token;
+			expr->FuncParams.Count += 1;
+		}
+
+		if (!CheckToken(parser, TokenKind_CloseBrace))
+		{
+			printf("expected close brace");
+			exit(-1);
+		}
+
+		if (!CheckToken(parser, TokenKind_OpenCurlyBrace))
+		{
+			printf("expected open curly brace");
+			exit(-1);
+		}
+
+		ExprNode first = {};
+		ExprNode* last = &first;
+
+		while (1)
+		{
+			ExprNode* node = ParseRootExpression(parser);
+
+			last->Next = node;
+			last = node;
+
+			if (CheckToken(parser, TokenKind_CloseCurlyBrace))
+			{
+				break;
+			}
+		}
+
+		expr->FuncBodyFirstExpr = first.Next;
+
+		return expr;
+	}
+
+	printf("expected identifier after func\n");
+	exit(-1);
+}
+
+ExprNode* ParseDefination(Parser *parser)
+{
+	if (CheckToken(parser, TokenKind_Func))
+	{
+		return ParseFunction(parser);
+	}
+
+	printf("only functions are allowed in global definations\n");
+	exit(-1);
+}
+
+ExprNode* ParseRootExpression(Parser* parser) 
+{
 	ExprNode* expr = ParseExpression(parser, true, -1);
-	if (!CheckToken(parser, TokenKind_SemiColon)) {
+	if (!CheckToken(parser, TokenKind_SemiColon)) 
+	{
 		printf("error: expected semicolon\n");
 		exit(1);
 	}
@@ -537,41 +798,73 @@ ExprNode* ParseRootExpression(Parser* parser) {
 }
 ///////////////////////////////////////////////////
 
-void  main(int argc, char** argv)
+ExprNode *FindFunction(ExprNode *first, const char *name)
+{
+	for (ExprNode *node = first->Next; node; node = node->Next)
+	{
+
+		if (strcmp(node->SRCToken.Data.Identifier, name) == 0)
+		{
+			return node;
+		}
+	}
+
+	return nullptr;
+}
+
+int  main(int argc, char** argv)
 {
 	if (argc != 2)
 	{
 		printf("error: expected file path\n");
-		exit(2);
+		exit(2); 
 	}
 
 	const char* filepath = argv[1];
 	char* input = ReadFile(filepath);
 	Parser parser = StartParsing(input, strlen(input));
 
+	ExprNode first = {};
+	ExprNode *last = &first;
+
 	Memory memory;
 	memset(&memory, 0, sizeof(memory));
 	while (Parsing(&parser))
 	{
+		ExprNode* expr = ParseDefination(&parser);
 
-		ExprNode* expr = ParseRootExpression(&parser);
-		/*PrintExpr(expr, 0);
-		EvaluateRootExpr(expr, &memory);
-		ExprNodeReset();
-		if (memory.Ans.Kind == ReturnKind_Float) {
-			printf("Float = %f\n", memory.Ans.Float);
+		const char *name = expr->SRCToken.Data.Identifier;
+
+		if (FindFunction(&first, name))
+		{
+			printf("redefination of function %s\n", name);
+			exit(-1);
 		}
-		else if (memory.Ans.Kind == ReturnKind_Int) {
-			printf("Int = %ld\n", memory.Ans.Int);
-		}
-		else if (memory.Ans.Kind == ReturnKind_Char) {
-			printf("String = %s\n", memory.Ans.Identifier);
-	   // }*/
-	   // printf("=================================================================================\n");*/
-	   ///*
+
+		last->Next = expr;
+		last = expr;
 	}
 
+	ExprNode *main_function = FindFunction(&first, "main");
 
+	if (!main_function)
+	{
+		printf("main function not defined\n");
+		exit(-1);
+	}
 
+	if (main_function->FuncParams.Count != 0)
+	{
+		printf("main function is not allowed to have function parameters\n");
+		exit(-1);
+	}
+
+	Memory mem;
+	memset(&mem, 0, sizeof(mem));
+
+	for (ExprNode *expr = main_function->FuncBodyFirstExpr; expr; expr = expr->Next)
+	{
+		//EvaluateRootExpr(expr, &mem);
+	}
 
 }
