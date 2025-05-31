@@ -1,18 +1,15 @@
 ﻿  simple.cpp
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,7): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,7): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,7): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,13): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,13): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,13): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,19): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,19): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,19): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,70): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,70): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(98,70): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(311,7): warning C4326: return type of 'main' should be 'int' instead of 'void'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(321,47): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Pradipta\source\repos\simple\simple.cpp(322,12): warning C4477: 'printf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'ReturnValue'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(246,1): warning C4715: 'Tokenize': not all control paths return a value
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,7): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,7): warning C4305: 'initializing': truncation from 'int' to 'const char'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,7): warning C4309: 'initializing': truncation of constant value
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,13): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,13): warning C4305: 'initializing': truncation from 'int' to 'const char'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,13): warning C4309: 'initializing': truncation of constant value
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,19): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,19): warning C4305: 'initializing': truncation from 'int' to 'const char'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,19): warning C4309: 'initializing': truncation of constant value
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,70): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,70): warning C4305: 'initializing': truncation from 'int' to 'const char'
+C:\Users\Pradipta\source\repos\simple\simple.cpp(101,70): warning C4309: 'initializing': truncation of constant value
+C:\Users\Pradipta\source\repos\simple\simple.cpp(772,44): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
   simple.vcxproj -> C:\Users\Pradipta\source\repos\simple\x64\Debug\simple.exe
