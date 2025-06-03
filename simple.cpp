@@ -47,15 +47,16 @@ const char* TokenNames[] = {
 	"invalid", "Number", "Identifier", ",", "||", "&&", "String", "==", ";", "+", "-", "*", "/", "(", "{", ")", "}", "&", "|", "==", "~", "return", "func"
 };
 
+
 enum ValueType
 {
 	ReturnKind_Int,
 	ReturnKind_Float,
-	Returnkind_Char
+	ReturnKind_Char
 
 };
 
-struct Value
+struct ReturnValue
 {
 	ValueType Kind;
 	int Int;
@@ -67,7 +68,7 @@ struct Token
 {
 	TokenKind Kind;
 	int64_t IdentifierLen; // bettter than int because it is perfect for precision but only works for 64 bit ; also int has a different size on 32 bits
-	Value Data;
+	ReturnValue Data;
 };
 
 struct Tokenizer
@@ -211,7 +212,7 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 		}
 		char* endptr1 = 0;
 		char* endptr2 = 0;
-		Value number;
+		ReturnValue number;
 		number.Float = strtod(str, &endptr1); //parse string to double 
 		number.Int = strtol(str, &endptr2, 10);// parse string to long int
 		number.Kind = endptr1 == endptr2 ? ReturnKind_Int : ReturnKind_Float;
@@ -319,12 +320,12 @@ char* ReadFile(const char* filepath)
 struct Variable
 {
 	char Name[MAX_IDENTIFIER_SIZE];
-	Value Value;
+	ReturnValue Value;
 };
 
 struct Memory
 {
-	Value Ans;
+	ReturnValue Ans;
 	Variable Vars[MAX_VARIABLE_COUNT];
 	int VariableCount;
 };
@@ -339,9 +340,6 @@ static BuiltinFuncDesc BuiltinFuncDescs[] = {
 	{ "mul", -1 },
 	{ "min", -1 },
 	{ "max", -1 },
-	{ "sin", 1 },
-	{ "cos", 1 },
-	{ "tan", 1 },
 	{"print", -1},
 };
 
@@ -351,15 +349,11 @@ enum BuiltInFunc {
 	BuiltinFunc_Mul,
 	BuiltinFunc_Min,
 	BuiltinFunc_Max,
-	BuiltinFunc_Sin,
-	BuiltinFunc_Cos,
-	BuiltinFunc_Tan,
 	BuiltinFunc_Print,
 	BuiltinFunc_Count,//8 defualt value 
 };
 enum ExprKind
 {
-
 	ExprKind_Number,
 	ExprKind_Identifier,
 	ExprKind_BuiltinFuncCall,
@@ -451,12 +445,7 @@ const UnaryOperatorKind UnaryOperatorStartOutput[] = {
 	UnaryOperator_Plus,
 	UnaryOperator_Minus,
 };
-const TokenKind UnaryOperatorInput[] = {
-	TokenKind_BitwiseNot,
-};
-const UnaryOperatorKind UnaryOperatorOutput[] = {
-	UnaryOperator_BitwiseNot,
-};
+
 const TokenKind BinaryOperatorInput[] = {
 	TokenKind_Plus,
 	TokenKind_Minus,
@@ -602,7 +591,7 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 		}
 	}
 
-	for (int i = 0; i < ArrayCount(UnaryOperatorInput); i++) 
+	/*for (int i = 0; i < ArrayCount(UnaryOperatorInput); i++) 
 	{
 		if (AcceptToken(parser, UnaryOperatorInput[i], &token)) 
 		{
@@ -611,7 +600,7 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 			expr->UnaryOperator = UnaryOperatorStartOutput[i];
 			return expr;
 		}
-	}
+	}*/
 	if (AcceptToken(parser, TokenKind_String, &token))
 	{  //parser will contain the current token that has been parsed and the toekn will contain the previous token
 		ExprNode* expr = ExprNodeCreate(ExprKind_String, &token);
@@ -811,6 +800,223 @@ ExprNode *FindFunction(ExprNode *first, const char *name)
 
 	return nullptr;
 }
+ReturnValue Evaluate(ExprNode* expr, Memory* mem);
+
+ReturnValue AddValue(ReturnValue A, ReturnValue B) {
+	ReturnValue R = {};
+	R.Int = A.Int + B.Int;
+	R.Float = A.Float + B.Float;
+	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
+	return R;
+}
+
+ReturnValue SubValue(ReturnValue A, ReturnValue B) {
+	ReturnValue R = {};
+	R.Int = A.Int - B.Int;
+	R.Float = A.Float - B.Float;
+	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
+	return R;
+}
+
+ReturnValue MulValue(ReturnValue A, ReturnValue B) {
+	ReturnValue R = {};
+	R.Int = A.Int * B.Int;
+	R.Float = A.Float * B.Float;
+	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
+	return R;
+}
+
+ReturnValue DivValue(ReturnValue A, ReturnValue B) {
+	ReturnValue R = {};
+	R.Int = A.Int / B.Int;
+	R.Float = A.Float / B.Float;
+	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
+	return R;
+}
+ReturnValue  BitANDValue(ReturnValue A, ReturnValue B)
+{
+	ReturnValue R = {};
+	R.Int = A.Int & B.Int;
+	R.Float = (int)A.Float & (int)B.Float;
+	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
+	return R;
+}
+ReturnValue  BitORValue(ReturnValue L, ReturnValue R)
+{
+	ReturnValue d = {};
+	d.Int = L.Int | R.Int;
+	d.Float = (int)L.Float | (int)R.Float;
+	d.Kind = L.Kind != R.Kind ? ReturnKind_Float : L.Kind;
+	return d;
+}
+ReturnValue Sum(FunctionArguments* args, Memory* mem) {
+	ReturnValue d = {};
+	for (int iter = 0; iter < args->Count; iter++) {
+		d = AddValue(d, Evaluate(args->Args[iter], mem));
+	}
+	return d;
+}
+
+ReturnValue Mul(FunctionArguments* args, Memory* mem) {
+	ReturnValue d = {};
+	d.Int = 1;
+	d.Float = 1;
+	d.Kind = ReturnKind_Int;
+	for (int iter = 0; iter < args->Count; iter++) {
+		d = MulValue(d, Evaluate(args->Args[iter], mem));
+	}
+	return d;
+}
+ReturnValue Print(FunctionArguments* args, Memory* mem) {
+	ReturnValue d = {};
+	for (int iter = 0; iter < args->Count; iter++) {
+		d = Evaluate(args->Args[0], mem);
+		if (d.Kind == ReturnKind_Float)
+		{
+			printf("%f\n", d.Float);
+		}
+		else if (d.Kind == ReturnKind_Int)
+		{
+			printf("%d\n", d.Int);
+		}
+		else
+		{
+			printf("%s\n", d.Identifier);
+		}
+	}
+	return d;
+}
+ReturnValue Min(FunctionArguments* args, Memory* mem) {
+	ReturnValue d = {};
+	d.Float = DBL_MAX;
+	d.Int = INT64_MAX;
+	d.Kind = ReturnKind_Int;
+	for (int iter = 0; iter < args->Count; iter++) 
+	{
+		ReturnValue n = Evaluate(args->Args[iter], mem);
+		if (n.Float < d.Float) d = n;
+	}
+	return d;
+}
+ReturnValue Max(FunctionArguments* args, Memory* mem) {
+	ReturnValue d = {};
+	d.Float = DBL_MAX;
+	d.Int = INT64_MAX;
+	d.Kind = ReturnKind_Int;
+	for (int iter = 0; iter < args->Count; iter++)
+	{
+		ReturnValue n = Evaluate(args->Args[iter], mem);
+		if (n.Float > d.Float) d = n;
+	}
+	return d;
+}
+
+typedef ReturnValue(*EvaluateBuiltinFunc)(FunctionArguments*, Memory*);
+//FUNCTION pointer////
+
+static EvaluateBuiltinFunc BuildinFuncEvaluateTable[] = {
+	Sum,Mul,Min, Max,Print
+	
+};
+ReturnValue EvaluateBuiltInFunction(ExprNode* expr, Memory* mem) {
+	if (expr->Func < ArrayCount(BuildinFuncEvaluateTable))
+		return BuildinFuncEvaluateTable[expr->Func](&expr->FuncArgs, mem);
+}
+Variable* SearchVariable(Memory* mem, char* varName)
+{
+	for (int i = 0;i < mem->VariableCount;i++)
+	{
+		if (!strcmp(varName, mem->Vars[i].Name))
+		{
+			return &mem->Vars[i];
+		}
+	}
+	return NULL;
+}
+ReturnValue Evaluate(ExprNode* expr, Memory* mem)
+{
+	if (expr->Kind == ExprKind_Number)
+	{
+		return expr->SRCToken.Data;
+	}
+	if (expr->Kind == ExprKind_Identifier)
+	{
+		Variable* var = SearchVariable(mem, expr->SRCToken.Data.Identifier);
+		if (!var)
+		{
+			if (mem->VariableCount == MAX_VARIABLE_COUNT)
+			{
+				printf("Variable %s isnot defined \n", expr->SRCToken.Data.Identifier);
+				exit(-1);
+			}
+			
+		}
+		return var->Value;
+	}
+	if (expr->Kind == ExprKind_UnaryOperator)
+	{
+		if (expr->UnaryOperator == UnaryOperator_Plus)
+		{
+			return Evaluate(expr->LeftNode, mem);
+		}
+		else if (expr->UnaryOperator == UnaryOperator_Minus)
+		{
+			ReturnValue v = Evaluate(expr->LeftNode, mem);
+			v.Int = -v.Int;
+			v.Float = -v.Float;
+			return v;
+		}
+	}
+	if (expr->Kind == ExprKind_BinaryOperator)
+	{
+		ReturnValue Left = Evaluate(expr->LeftNode, mem);
+		ReturnValue Right = Evaluate(expr->RightNode, mem);
+		if (expr->BinaryOperator == BinaryOperator_Plus)
+		{
+			return AddValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_Minus) {
+			return SubValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_Multiply) {
+			return MulValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_Divide) {
+			return DivValue(Left, Right);
+		}
+	}
+	if (expr->Kind == ExprKind_Assignment)
+	{
+		char* varname = expr->LeftNode->SRCToken.Data.Identifier;
+		Variable* var = SearchVariable(mem, varname);
+		if (!var) 
+		{
+			if (mem->VariableCount == MAX_VARIABLE_COUNT) {
+				printf("Out of Memory. Cannot create new variable\n");
+				exit(-1);
+			}
+			strcpy_s(mem->Vars[mem->VariableCount].Name,varname);
+			var = &mem->Vars[mem->VariableCount++];
+		}
+		var->Value = Evaluate(expr->RightNode, mem);
+		return var->Value;
+	}
+	if (expr->Kind == ExprKind_BuiltinFuncCall) {
+		return EvaluateBuiltInFunction(expr, mem);
+	}
+
+	if (expr->Kind == ExprKind_String) {
+		ReturnValue d = {};
+		strcpy_s(d.Identifier, expr->SRCToken.Data.Identifier);
+		d.Kind = ReturnKind_Char;
+		return d;
+	}
+}
+void EvaluateRootExpr(ExprNode *expr, Memory *mem) 
+{
+    mem->Ans =Evaluate(expr, mem);
+}
+ 
 
 int  main(int argc, char** argv)
 {
@@ -861,10 +1067,10 @@ int  main(int argc, char** argv)
 
 	Memory mem;
 	memset(&mem, 0, sizeof(mem));
-
 	for (ExprNode *expr = main_function->FuncBodyFirstExpr; expr; expr = expr->Next)
 	{
-		//EvaluateRootExpr(expr, &mem);
+		EvaluateRootExpr(expr, &mem);
+		
 	}
 
 }
