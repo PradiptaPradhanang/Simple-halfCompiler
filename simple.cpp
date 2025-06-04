@@ -258,6 +258,24 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 		return true;
 
 	}
+	if (a == '\"') {  // next line logic
+
+		Tokenizer->Position++;
+		for (int iter = 0; Tokenizer->Position < Tokenizer->Length; iter++) {
+			char b = Tokenizer->Input[Tokenizer->Position];
+			if ((b == '\"')) {
+				Tokenizer->Position++;
+				Token->Kind = TokenKind_String;
+				return true;
+			}
+			if (iter >= MAX_IDENTIFIER_SIZE) {
+				printf("Too long String\n");
+				exit(-1);
+			}
+			Token->Data.Identifier[iter] = b;
+			Tokenizer->Position++;
+		}
+	}
 
 	printf("invalid character: %c\n", a);
 	exit(1);
@@ -436,6 +454,7 @@ struct ExprNode
 	BinaryOperatorKind BinaryOperator;
 	UnaryOperatorKind UnaryOperator;
 };
+
 
 const TokenKind UnaryOperatorStartInput[] = {
 	TokenKind_Plus,
@@ -801,8 +820,17 @@ ExprNode *FindFunction(ExprNode *first, const char *name)
 	return nullptr;
 }
 ReturnValue Evaluate(ExprNode* expr, Memory* mem);
-
+void CheckOperandType(ReturnValue A, ReturnValue B)
+{
+	if ((A.Kind != ReturnKind_Float) || (B.Kind != ReturnKind_Float) || (A.Kind != ReturnKind_Int) || (B.Kind != ReturnKind_Int))
+	{
+		printf("the entered operands arenot suitable for arithmetic operations\n");
+		exit(-1);
+	}
+	
+}
 ReturnValue AddValue(ReturnValue A, ReturnValue B) {
+	CheckOperandType(A, B);
 	ReturnValue R = {};
 	R.Int = A.Int + B.Int;
 	R.Float = A.Float + B.Float;
@@ -811,6 +839,7 @@ ReturnValue AddValue(ReturnValue A, ReturnValue B) {
 }
 
 ReturnValue SubValue(ReturnValue A, ReturnValue B) {
+	CheckOperandType(A, B);
 	ReturnValue R = {};
 	R.Int = A.Int - B.Int;
 	R.Float = A.Float - B.Float;
@@ -819,6 +848,7 @@ ReturnValue SubValue(ReturnValue A, ReturnValue B) {
 }
 
 ReturnValue MulValue(ReturnValue A, ReturnValue B) {
+	CheckOperandType(A, B);
 	ReturnValue R = {};
 	R.Int = A.Int * B.Int;
 	R.Float = A.Float * B.Float;
@@ -827,6 +857,7 @@ ReturnValue MulValue(ReturnValue A, ReturnValue B) {
 }
 
 ReturnValue DivValue(ReturnValue A, ReturnValue B) {
+	CheckOperandType(A, B);
 	ReturnValue R = {};
 	R.Int = A.Int / B.Int;
 	R.Float = A.Float / B.Float;
@@ -835,6 +866,7 @@ ReturnValue DivValue(ReturnValue A, ReturnValue B) {
 }
 ReturnValue  BitANDValue(ReturnValue A, ReturnValue B)
 {
+	CheckOperandType(A, B);
 	ReturnValue R = {};
 	R.Int = A.Int & B.Int;
 	R.Float = (int)A.Float & (int)B.Float;
@@ -843,6 +875,7 @@ ReturnValue  BitANDValue(ReturnValue A, ReturnValue B)
 }
 ReturnValue  BitORValue(ReturnValue L, ReturnValue R)
 {
+	CheckOperandType(L, R);
 	ReturnValue d = {};
 	d.Int = L.Int | R.Int;
 	d.Float = (int)L.Float | (int)R.Float;
@@ -894,11 +927,13 @@ ReturnValue Min(FunctionArguments* args, Memory* mem) {
 	for (int iter = 0; iter < args->Count; iter++) 
 	{
 		ReturnValue n = Evaluate(args->Args[iter], mem);
+		CheckOperandType(n, d);
 		if (n.Float < d.Float) d = n;
 	}
 	return d;
 }
-ReturnValue Max(FunctionArguments* args, Memory* mem) {
+ReturnValue Max(FunctionArguments* args, Memory* mem) 
+{
 	ReturnValue d = {};
 	d.Float = DBL_MAX;
 	d.Int = INT64_MAX;
@@ -906,6 +941,7 @@ ReturnValue Max(FunctionArguments* args, Memory* mem) {
 	for (int iter = 0; iter < args->Count; iter++)
 	{
 		ReturnValue n = Evaluate(args->Args[iter], mem);
+		CheckOperandType(n, d);
 		if (n.Float > d.Float) d = n;
 	}
 	return d;
@@ -926,13 +962,15 @@ Variable* SearchVariable(Memory* mem, char* varName)
 {
 	for (int i = 0;i < mem->VariableCount;i++)
 	{
-		if (!strcmp(varName, mem->Vars[i].Name))
+		if (!strcmp(varName, mem->Vars[i].Name))  // if string matches then 0 is returned
 		{
 			return &mem->Vars[i];
 		}
 	}
 	return NULL;
 }
+
+ExprNode first = {};//header for linked list 
 ReturnValue Evaluate(ExprNode* expr, Memory* mem)
 {
 	if (expr->Kind == ExprKind_Number)
@@ -999,13 +1037,56 @@ ReturnValue Evaluate(ExprNode* expr, Memory* mem)
 			var = &mem->Vars[mem->VariableCount++];
 		}
 		var->Value = Evaluate(expr->RightNode, mem);
+		if (&var->Value == nullptr)
+		{
+			printf("Variable is not properly assigned \n");
+			exit(-1);
+		}
 		return var->Value;
 	}
 	if (expr->Kind == ExprKind_BuiltinFuncCall) {
 		return EvaluateBuiltInFunction(expr, mem);
 	}
+	if (expr->Kind == ExprKind_UserDefinedFuncCall) 
+	{
+		const char* name = expr->SRCToken.Data.Identifier;
+		ExprNode* calledFunc;
+		if (calledFunc=FindFunction(&first, name))
+		{
+			Memory* funcMem = (Memory*)calloc(1, sizeof(Memory));  // Alternative approach  for allocating memory
+		//	printf("function %s was found\n", name);
+			for (int i = 0;i < expr->FuncArgs.Count;i++)
+			{
+				calledFunc->FuncArgs.Args[i] =expr->FuncArgs.Args[i];
+				Variable* varPtr = SearchVariable(mem, expr->FuncArgs.Args[i]->SRCToken.Data.Identifier);
+				strcpy_s(funcMem->Vars[i].Name, calledFunc->FuncParams.Params[i].Data.Identifier);
+				funcMem->Vars[i].Value = varPtr->Value;
+				funcMem->VariableCount++;
+				calledFunc->FuncArgs.Count++;
+			}
+			ReturnValue d = {};
+			for (ExprNode* tempexpr = calledFunc->FuncBodyFirstExpr;tempexpr;tempexpr = tempexpr->Next)
+			{  
+				if (tempexpr->Kind == ExprKind_Return)
+				{ 
+					d= Evaluate(tempexpr->LeftNode, funcMem);
+					free(funcMem);
+					return d;
+				}
+				else
+					Evaluate(tempexpr, funcMem);
+			}
+			free(funcMem);
+			return d;
+		}
+		else
+		{
+			printf("no function was found");
+		}
+	}
 
-	if (expr->Kind == ExprKind_String) {
+	if (expr->Kind == ExprKind_String)
+	{
 		ReturnValue d = {};
 		strcpy_s(d.Identifier, expr->SRCToken.Data.Identifier);
 		d.Kind = ReturnKind_Char;
@@ -1016,7 +1097,7 @@ void EvaluateRootExpr(ExprNode *expr, Memory *mem)
 {
     mem->Ans =Evaluate(expr, mem);
 }
- 
+
 
 int  main(int argc, char** argv)
 {
@@ -1030,7 +1111,6 @@ int  main(int argc, char** argv)
 	char* input = ReadFile(filepath);
 	Parser parser = StartParsing(input, strlen(input));
 
-	ExprNode first = {};
 	ExprNode *last = &first;
 
 	Memory memory;
