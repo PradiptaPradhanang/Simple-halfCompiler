@@ -1,21 +1,2 @@
-﻿  simple.cpp
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,7): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,7): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,7): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,13): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,13): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,13): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,19): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,19): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,19): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,70): warning C4838: conversion from 'int' to 'const char' requires a narrowing conversion
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,70): warning C4305: 'initializing': truncation from 'int' to 'const char'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(104,70): warning C4309: 'initializing': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(925,10): warning C4305: '=': truncation from '__int64' to 'int'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(925,10): warning C4309: '=': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(939,10): warning C4305: '=': truncation from '__int64' to 'int'
-C:\Users\Pradipta\source\repos\simple\simple.cpp(939,10): warning C4309: '=': truncation of constant value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(1112,44): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Pradipta\source\repos\simple\simple.cpp(960,1): warning C4715: 'EvaluateBuiltInFunction': not all control paths return a value
-C:\Users\Pradipta\source\repos\simple\simple.cpp(1095,1): warning C4715: 'Evaluate': not all control paths return a value
+﻿  Evaluate.cpp
   simple.vcxproj -> C:\Users\Pradipta\source\repos\simple\x64\Debug\simple.exe
