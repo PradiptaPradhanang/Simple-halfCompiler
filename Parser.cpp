@@ -6,6 +6,10 @@ bool Parsing(Parser* parser)
 	return parser->Parsing;
 }
 
+bool PeekToken(Parser* parser, TokenKind kind)
+{
+	return parser->Current.Kind == kind;
+}
 
 bool AcceptToken(Parser* parser, TokenKind kind, Token* token)
 {
@@ -24,7 +28,8 @@ bool CheckToken(Parser* parser, TokenKind Kind)
 	Token token = {};
 	return AcceptToken(parser, Kind, &token);
 }
-ExprNode* ExprNodeCreate(ExprKind Kind, Token *token)
+
+ExprNode* ExprNodeCreate(ExprKind Kind, Token* token)
 {
 	ExprNode* node = (ExprNode*)malloc(sizeof(ExprNode)); // allocate size for each node
 	if (node != 0)
@@ -39,7 +44,7 @@ ExprNode* ExprNodeCreate(ExprKind Kind, Token *token)
 
 FunctionArguments ParseFunctionArguments(Parser* parser);
 ExprNode* ParseExpression(Parser* parser, bool start, int prev_prec);
-
+ExprNode* ParseRootExpression(Parser* parser);
 ExprNode* ParseSubexpression(Parser* parser, bool start)
 {
 	// mainly for parsing numbers
@@ -74,7 +79,7 @@ ExprNode* ParseSubexpression(Parser* parser, bool start)
 				expr = ExprNodeCreate(ExprKind_BuiltinFuncCall, &token);
 				expr->FuncArgs = ParseFunctionArguments(parser);// for function 
 				expr->Func = func;
-				if (desc->ArgCount != -1 && desc->ArgCount != expr->FuncArgs.Count) 
+				if (desc->ArgCount != -1 && desc->ArgCount != expr->FuncArgs.Count)
 				{
 					printf("expected %d number of arguments but got %d arguments for function %s\n",
 						desc->ArgCount, expr->FuncArgs.Count, desc->Name);
@@ -167,22 +172,74 @@ FunctionArguments ParseFunctionArguments(Parser* parser)
 	return args;
 }
 
-ExprNode* ParseExpression(Parser* parser,bool start,int prev_prec)
+ExprNode *ParseBlock(Parser *parser)
 {
+	Token token;
+	if (AcceptToken(parser, TokenKind_OpenCurlyBrace, &token))
+	{
+		ExprNode* expr = ExprNodeCreate(ExprKind_Block, &token);
+
+		ExprNode first = {};
+		ExprNode* last = &first;
+		while (1)
+		{
+			ExprNode* node = ParseRootExpression(parser);
+			last->Next = node;
+			last = node;
+			if (CheckToken(parser, TokenKind_CloseCurlyBrace))
+			{
+				break;
+			}
+		}
+		expr->Child = first.Next;
+		return expr;
+	}
+
+	printf("expected block\n");
+	exit(-1);
+}
+
+ExprNode* ParseConditionalLogic(Parser* parser)
+{
+	Token token;
+	ExprNode* expr = ExprNodeCreate(ExprKind_IF, &token);
+	if (CheckToken(parser, TokenKind_OpenBrace))
+	{
+		expr->Child = ParseExpression(parser, false, -1);
+		if (!CheckToken(parser, TokenKind_CloseBrace))
+		{
+			printf("error: expected close brace\n");
+			exit(1);
+		}
+	}
+
+	expr->LeftNode = ParseRootExpression(parser);
+
+	if (CheckToken(parser, TokenKind_Else))
+	{
+		expr->RightNode = ParseRootExpression(parser);
+	}
+
+	return expr;
+}
+
+ExprNode* ParseExpression(Parser* parser, bool start, int prev_prec)
+{   
+	
 	if (start) /// a return token can be present only once in the function body for now
 	{
 		Token token = {};
-			if (AcceptToken(parser, TokenKind_Return, &token))
-			{
-				ExprNode* expr = ExprNodeCreate(ExprKind_Return, &token);
-				expr->LeftNode = ParseExpression(parser, true, -1);
-				return expr;
-			}
+		if (AcceptToken(parser, TokenKind_Return, &token))
+		{
+			ExprNode* expr = ExprNodeCreate(ExprKind_Return, &token);
+			expr->LeftNode = ParseExpression(parser, true, -1);
+			return expr;
+		}
 	}
 	ExprNode* left = ParseSubexpression(parser, true);
 
 	while (Parsing(parser))
-	{  
+	{
 		if (start)// for validating only one equal sign is valid here
 		{
 			Token token = {};
@@ -203,7 +260,7 @@ ExprNode* ParseExpression(Parser* parser,bool start,int prev_prec)
 		int precedence = 0;
 		int binaryOp = -1;
 
-		for (int iter = 0; iter < ArrayCount(BinaryOperatorInput); ++iter) 
+		for (int iter = 0; iter < ArrayCount(BinaryOperatorInput); ++iter)
 		{
 			if (parser->Current.Kind == BinaryOperatorInput[iter])
 			{
@@ -230,6 +287,19 @@ ExprNode* ParseExpression(Parser* parser,bool start,int prev_prec)
 
 ExprNode* ParseRootExpression(Parser* parser)
 {
+	if (PeekToken(parser, TokenKind_OpenCurlyBrace))
+	{
+		ExprNode *expr = ParseBlock(parser);
+		return expr;
+	}
+
+	Token token;
+	if (AcceptToken(parser, TokenKind_IF, &token))
+	{
+		ExprNode* expr = ParseConditionalLogic(parser);
+		return expr;
+	}
+
 	ExprNode* expr = ParseExpression(parser, true, -1);
 	if (!CheckToken(parser, TokenKind_SemiColon))
 	{
@@ -239,7 +309,7 @@ ExprNode* ParseRootExpression(Parser* parser)
 	return expr;
 }
 
-ExprNode* ParseFunction(Parser *parser)
+ExprNode* ParseFunction(Parser* parser)
 {
 	Token token;
 	if (AcceptToken(parser, TokenKind_Identifier, &token))
@@ -270,10 +340,10 @@ ExprNode* ParseFunction(Parser *parser)
 				}
 				if (!AcceptToken(parser, TokenKind_Identifier, &token))
 				{
-					
-						printf("expected identifier\n");
-						exit(-1);
-					
+
+					printf("expected identifier\n");
+					exit(-1);
+
 				}
 			}
 			if (expr->FuncParams.Count == MAX_ARGUMENT_COUNT)
@@ -290,31 +360,10 @@ ExprNode* ParseFunction(Parser *parser)
 			printf("expected close brace");
 			exit(-1);
 		}
-
-		if (!CheckToken(parser, TokenKind_OpenCurlyBrace))
-		{
-			printf("expected open curly brace");
-			exit(-1);
-		}
-
-		///////////////// the function body parsing begins from here//////////////
-		ExprNode first = {};
-		ExprNode* last = &first; 
-		while (1)
-		{
-			ExprNode* node = ParseRootExpression(parser);
-			last->Next = node;
-			last = node;
-			if (CheckToken(parser, TokenKind_CloseCurlyBrace))
-			{
-				break;
-			}
-		}
-		expr->FuncBodyFirstExpr = first.Next; //skip the first temporary node
+		
+		expr->Child = ParseRootExpression(parser);
 
 		return expr;
-
-
 	}
 
 	printf("expected identifier after func\n");
@@ -322,11 +371,12 @@ ExprNode* ParseFunction(Parser *parser)
 
 }
 
-ExprNode *ParseDefinition(Parser *parser)
+ExprNode* ParseDefinition(Parser* parser)
 {
 	if (CheckToken(parser, TokenKind_Func))
 	{
 		return ParseFunction(parser);
 	}
 	printf("only functions are allowed in global definition is allowed");
+	exit(-1);
 }

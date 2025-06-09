@@ -10,7 +10,7 @@ struct Variable
 
 struct Memory
 {
-	Value Ans;
+	bool Returned;
 	Variable Vars[MAX_VARIABLE_COUNT];
 	int VariableCount;
 };
@@ -18,6 +18,5 @@ struct Memory
 Value Evaluate(ExprNode* expr, Memory* mem);
 ExprNode* FindFunction(ExprNode* first, const char* name);
 typedef Value(*EvaluateBuiltinFunc)(FunctionArguments*, Memory*);// function pointer
-void EvaluateRootExpr(ExprNode* expr, Memory* mem);
 void SetCode(ExprNode f);
-void EvaluateFunction(ExprNode* node, Memory* mem);
+Value EvaluateFunction(ExprNode* node, Memory* mem);

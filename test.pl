@@ -1,19 +1,42 @@
 
-func main()
-{	
-	a=3*4+5;
-	b=3;
+func compare(a,b)
+{
+	if(a>b)
+		print(a);
+	else if(a==3)
+		print(b);
+}
+func sub(a, b)
+	return a - b;
 
-	g = sum(1, 2, sum(3, 4));
-
-	print(g);
-
-	a= -3 + add(2, add(1, 3 * 4));
-	print(a, b, a);
+func fib(n)
+{
+	if (n < 2)
+		return n;
+	f = fib(n - 1) + fib(n - 2);
+	return f;
 }
 
 func add(d,e)
-{
+{   
+	if (e == 12)
+		return d;
+
+	if(d)
+	{
+		print("========== ", d);
+	}
+
 	c=d+e;
 	return c;
+}
+func main()
+{	
+	print(fib(1));
+	print(fib(2));
+	print(fib(3));
+	print(fib(4));
+	print(fib(5));
+	print(fib(6));
+
 }

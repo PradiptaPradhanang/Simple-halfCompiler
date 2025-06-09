@@ -17,6 +17,10 @@ enum BinaryOperatorKind
 	BinaryOperator_Divide,
 	BinaryOperator_BitwiseAND,
 	BinaryOperator_BitwiseOR,
+	BinaryOperator_CompareEqual,
+	BinaryOperator_CompareNotEqual,
+	BinaryOperator_CompareLessThan,
+	BinaryOperator_CompareGreaterThan,
 };
 
 struct FunctionParameters
@@ -35,7 +39,10 @@ static BuiltinFuncDesc BuiltinFuncDescs[] = {
 	{ "mul", -1 },
 	{ "min", -1 },
 	{ "max", -1 },
-	{"print", -1},
+	{ "sin",  1},
+	{ "cos",  1},
+	{ "tan",  1},
+	{ "print",-1},
 };
 
 
@@ -44,6 +51,9 @@ enum BuiltInFunc {
 	BuiltinFunc_Mul,
 	BuiltinFunc_Min,
 	BuiltinFunc_Max,
+	BuiltinFunc_Sin,
+	BuiltinFunc_Cos,
+	BuiltinFunc_Tan,
 	BuiltinFunc_Print,
 	BuiltinFunc_Count,
 };
@@ -57,9 +67,12 @@ enum ExprKind
 	ExprKind_BinaryOperator,
 	ExprKind_UnaryOperator,
 	ExprKind_Assignment,
+	ExprKind_Block,
 	ExprKind_Function,
 	ExprKind_Return,
+	ExprKind_IF,
 };
+
 
 struct ExprNode;
 
@@ -74,9 +87,10 @@ struct ExprNode
 	ExprKind Kind;
 	Token SRCToken;
 	ExprNode* Next;
-	ExprNode* LeftNode;
-	ExprNode* RightNode;
-	ExprNode* FuncBodyFirstExpr;
+	ExprNode* Child;
+	ExprNode* LeftNode; // if block
+	ExprNode* RightNode; // else block
+	//ExprNode* IFBodyFirstExpr;
 	BuiltInFunc Func;
 	FunctionArguments FuncArgs;
 	FunctionParameters FuncParams;
@@ -101,6 +115,10 @@ const TokenKind BinaryOperatorInput[] = {
 	TokenKind_Divide,
 	TokenKind_AND,
 	TokenKind_BitwiseOR,
+	TokenKind_EqualEqual,
+	TokenKind_NotEqual,
+	TokenKind_LessThan,
+	TokenKind_GreaterThan,
 };
 
 const BinaryOperatorKind BinaryOperatorOutput[] = {
@@ -110,6 +128,10 @@ const BinaryOperatorKind BinaryOperatorOutput[] = {
 	BinaryOperator_Divide,
 	BinaryOperator_BitwiseAND,
 	BinaryOperator_BitwiseOR,
+	BinaryOperator_CompareEqual,
+	BinaryOperator_CompareNotEqual,
+	BinaryOperator_CompareLessThan,
+	BinaryOperator_CompareGreaterThan,
 };
 const int BinaryOperatorPrecedence[] =
 {

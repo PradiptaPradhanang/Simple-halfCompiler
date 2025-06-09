@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <ctype.h>
+#include <math.h>
 
 #define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
 
@@ -35,9 +36,14 @@ enum TokenKind
 	TokenKind_BitwiseAND, // &
 	TokenKind_BitwiseOR, // |
 	TokenKind_EqualEqual,// ==
+	TokenKind_NotEqual,// !=
+	TokenKind_LessThan, //<
+	TokenKind_GreaterThan,//>
 	TokenKind_BitwiseNot,  // ~
 	TokenKind_Return,
 	TokenKind_Func,
+	TokenKind_IF,
+	TokenKind_Else
 };
 
 enum ValueType
@@ -77,7 +83,7 @@ struct Parser
 	bool      Parsing;
 };
 const char SingleCharTokenInput[] = {
- ',', '|', '&', '=', ';', '+', '-', '*', '/', '(', ')', '&', '|', '=', '~', '{', '}'
+ ',', '|', '&', '=', ';', '+', '-', '*', '/', '(', ')', '&', '|', '=', '~', '<','>','{', '}'
 };
 
 const TokenKind SingleCharTokenOutput[] =
@@ -97,6 +103,8 @@ const TokenKind SingleCharTokenOutput[] =
 	TokenKind_BitwiseOR, // |
 	TokenKind_EqualEqual ,// ==
 	TokenKind_BitwiseNot,  // ~
+	TokenKind_LessThan,  // <
+	TokenKind_GreaterThan,  // >
 	TokenKind_OpenCurlyBrace,
 	TokenKind_CloseCurlyBrace,
 };
@@ -106,9 +114,9 @@ struct DoubleCharToken {
 	char A, B;
 };
 
-const DoubleCharToken DoubleCharTokenInput[] = { {'=', '='}, { '|', '|'}, { '&', '&' } };
+const DoubleCharToken DoubleCharTokenInput[] = { {'=', '='}, { '|', '|'}, { '&', '&' }, { '!', '=' } };
 const TokenKind   DoubleCharTokenOutput[] ={
-	TokenKind_EqualEqual, TokenKind_BitwiseOR, TokenKind_BitwiseAND
+	TokenKind_EqualEqual, TokenKind_BitwiseOR, TokenKind_BitwiseAND, TokenKind_NotEqual
 };
 
 Parser StartParsing(const char* str, int length);

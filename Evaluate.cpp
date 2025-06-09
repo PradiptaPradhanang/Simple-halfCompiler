@@ -67,6 +67,60 @@ Value DivValue(Value A, Value B) {
 	R.Kind = A.Kind != B.Kind ? ReturnKind_Float : A.Kind;
 	return R;
 }
+
+Value EqualValue(Value A, Value B) {
+	CheckOperandType(A, B);
+
+	Value R = {};
+
+	R.Kind = ReturnKind_Int;
+
+	if (A.Kind == ReturnKind_Int)
+	{
+		if (B.Kind == ReturnKind_Int)
+		{
+			R.Int = (A.Int == B.Int);
+		}
+		else if (B.Kind == ReturnKind_Float)
+		{
+			R.Int = (A.Int == B.Float);
+		}
+	}
+	else if (A.Kind == ReturnKind_Float)
+	{
+		if (B.Kind == ReturnKind_Int)
+		{
+			R.Int = (A.Float == B.Int);
+		}
+		else if (B.Kind == ReturnKind_Float)
+		{
+			R.Int = (A.Float == B.Float);
+		}
+	}
+	return R;
+}
+
+Value NotEqualValue(Value A, Value B) {
+	Value v = EqualValue(A, B);
+	v.Int = v.Int ? 0 : 1;
+	return v;
+}
+
+Value GreaterValue(Value A, Value B) {
+	Value v;
+	v.Kind = ReturnKind_Int;
+	CheckOperandType(A, B);
+	v.Int = (A.Float > B.Float);
+	return v;
+}
+
+Value LessValue(Value A, Value B) {
+	Value v;
+	v.Kind = ReturnKind_Int;
+	CheckOperandType(A, B);
+	v.Int = (A.Float < B.Float);
+	return v;
+}
 Value  BitANDValue(Value A, Value B)
 {
 	CheckOperandType(A, B);
@@ -109,17 +163,19 @@ Value Print(FunctionArguments* args, Memory* mem) {
 		d = Evaluate(args->Args[iter], mem);
 		if (d.Kind == ReturnKind_Float)
 		{
-			printf("%f\n", d.Float);
+			printf("%f", d.Float);
 		}
 		else if (d.Kind == ReturnKind_Int)
 		{
-			printf("%d\n", d.Int);
+			printf("%d", d.Int);
 		}
 		else
 		{
-			printf("%s\n", d.Identifier);
+			printf("%s", d.Identifier);
 		}
+		printf(" ");
 	}
+	printf("\n");
 	return d;
 }
 Value Min(FunctionArguments* args, Memory* mem) {
@@ -149,12 +205,44 @@ Value Max(FunctionArguments* args, Memory* mem)
 	}
 	return d;
 }
-
+Value Sin(FunctionArguments* args, Memory* mem)
+{
+	Value d = {};
+	d = Evaluate(args->Args[0], mem);
+	Value r;
+	CheckOperandType(d, d);
+	r.Float = sin(d.Float);
+	r.Kind = ReturnKind_Float;
+	r.Int = (int)r.Float;
+	return r;
+}
+Value Cos(FunctionArguments* args, Memory* mem)
+{
+	Value d = {};
+	d = Evaluate(args->Args[0], mem);
+	Value r;
+	CheckOperandType(d, d);
+	r.Float = cos(d.Float);
+	r.Kind = ReturnKind_Float;
+	r.Int = (int)r.Float;
+	return r;
+}
+Value Tan(FunctionArguments* args, Memory* mem)
+{
+	Value d = {};
+	d = Evaluate(args->Args[0], mem);
+	Value r;
+	CheckOperandType(d, d);
+	r.Float = tan(d.Float);
+	r.Kind = ReturnKind_Float;
+	r.Int = (int)r.Float;
+	return r;
+}
 typedef Value(*EvaluateBuiltinFunc)(FunctionArguments*, Memory*);
 //FUNCTION pointer////
 
 static EvaluateBuiltinFunc BuildinFuncEvaluateTable[] = {
-	Sum,Mul,Min, Max,Print
+	Sum,Mul,Min, Max,Sin,Cos,Tan,Print
 
 };
 Value EvaluateBuiltInFunction(ExprNode* expr, Memory* mem) {
@@ -182,7 +270,7 @@ Variable* SearchVariable(Memory* mem, char* varName, bool insert_if_not_found = 
 		}
 
 		strcpy_s(mem->Vars[mem->VariableCount].Name, varName);
-		Variable *var = &mem->Vars[mem->VariableCount++];
+		Variable* var = &mem->Vars[mem->VariableCount++];
 
 		return var;
 	}
@@ -241,6 +329,18 @@ Value Evaluate(ExprNode* expr, Memory* mem)
 		else if (expr->BinaryOperator == BinaryOperator_Divide) {
 			return DivValue(Left, Right);
 		}
+		else if (expr->BinaryOperator == BinaryOperator_CompareEqual) {
+			return EqualValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_CompareNotEqual) {
+			return NotEqualValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_CompareGreaterThan) {
+			return GreaterValue(Left, Right);
+		}
+		else if (expr->BinaryOperator == BinaryOperator_CompareLessThan) {
+			return LessValue(Left, Right);
+		}
 	}
 	if (expr->Kind == ExprKind_Assignment)
 	{
@@ -296,18 +396,8 @@ Value Evaluate(ExprNode* expr, Memory* mem)
 			//	funcMem->VariableCount++;
 			//	calledFunc->FuncArgs.Count++;
 			//}
-			Value d = {};
-			for (ExprNode* tempexpr = calledFunc->FuncBodyFirstExpr;tempexpr;tempexpr = tempexpr->Next)
-			{
-				if (tempexpr->Kind == ExprKind_Return)
-				{
-					d = Evaluate(tempexpr->LeftNode, funcMem);
-					free(funcMem);
-					return d;
-				}
-				else
-					Evaluate(tempexpr, funcMem);
-			}
+
+			Value d = EvaluateFunction(calledFunc, funcMem);
 			free(funcMem);
 			return d;
 		}
@@ -325,19 +415,48 @@ Value Evaluate(ExprNode* expr, Memory* mem)
 		return d;
 	}
 
+	if (expr->Kind == ExprKind_Block)
+	{
+		Value v = {};
+		for (ExprNode* node = expr->Child; node; node = node->Next)
+		{
+			v = Evaluate(node, mem);
+			if (mem->Returned)
+				return v;
+		}
+		return v;
+	}
+
+	if (expr->Kind == ExprKind_IF)
+	{
+		Value val = Evaluate(expr->Child, mem);
+
+		if (val.Int)
+		{
+			return Evaluate(expr->LeftNode, mem);
+		}
+		else
+		{
+			if (expr->RightNode)
+				Evaluate(expr->RightNode, mem);
+		}
+
+		Value value = {};
+		return value;
+	}
+
+	if (expr->Kind == ExprKind_Return)
+	{
+		Value v = Evaluate(expr->LeftNode, mem);
+		mem->Returned = true;
+		return v;
+	}
+
 	Value value = {};
 	return value;
 }
 
-void EvaluateRootExpr(ExprNode* expr, Memory* mem)
+Value EvaluateFunction(ExprNode* node, Memory* mem)
 {
-	mem->Ans = Evaluate(expr, mem);
-}
-
-void EvaluateFunction(ExprNode* node, Memory *mem)
-{
-	for (ExprNode* expr = node->FuncBodyFirstExpr; expr; expr = expr->Next)
-	{
-		EvaluateRootExpr(expr, mem);
-	}
+	return Evaluate(node->Child, mem);
 }

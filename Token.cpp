@@ -13,9 +13,11 @@ bool SkipWhiteSpaces(Tokenizer* Tokenizer)
 	while (Tokenizer->Position < Tokenizer->Length)
 	{
 		char ch = Tokenizer->Input[Tokenizer->Position];
+		printf("the character token is %c and the position is %d\n", ch, Tokenizer->Position);
 		if (!isspace(ch))
 			break;
-		++(*Tokenizer).Position;// Tokenizer->Positon+=1;
+		//++(*Tokenizer).Position;
+		Tokenizer->Position+=1;
 	}
 	return true;
 }
@@ -40,9 +42,9 @@ bool IsNumberSeparator(char c)
 }
 
 bool Tokenize(Tokenizer* Tokenizer, Token* Token)
-{
+{  
+	
 	memset(Token, 0, sizeof(*Token));
-
 	while (Tokenizer->Position < Tokenizer->Length)
 	{   
 		if (!SkipWhiteSpaces(Tokenizer))
@@ -72,7 +74,7 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 	{
 		//printf("%d; %c == %c\n", i, a, SingleCharTokenInput[i]);
 		if (a == SingleCharTokenInput[i])
-		{
+		{ 
 			//printf("single character token: %c\n", a);
 
 			Token->Kind = SingleCharTokenOutput[i];
@@ -80,6 +82,7 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 			return true;
 		}
 	}
+	
 	if (IsNum(a))
 	{
 		char str[MAX_IDENTIFIER_SIZE] = {};
@@ -106,12 +109,12 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 
 		Token->Kind = TokenKind_Number;
 		Token->Data = number;
-
+	
 		return true;
 	}
 	if (isalnum(a) || a == '_')
 	{
-		Token->Kind = TokenKind_Identifier;
+		
 		while (Tokenizer->Position < Tokenizer->Length)
 		{
 			a = Tokenizer->Input[Tokenizer->Position];
@@ -130,11 +133,16 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 			}
 
 		}
-
 		if (strcmp(Token->Data.Identifier, "func") == 0) // the first statement should be this 
 			Token->Kind = TokenKind_Func;
 		else if (strcmp(Token->Data.Identifier, "return") == 0)
 			Token->Kind = TokenKind_Return;
+		else if (strcmp(Token->Data.Identifier, "if") == 0)
+			Token->Kind = TokenKind_IF;
+		else if (strcmp(Token->Data.Identifier, "else") == 0)
+			Token->Kind = TokenKind_Else;
+		else 
+			Token->Kind = TokenKind_Identifier;
 
 		return true;
 
@@ -155,7 +163,6 @@ bool Tokenize(Tokenizer* Tokenizer, Token* Token)
 			}
 			Token->Data.Identifier[iter] = b;
 			Tokenizer->Position++;
-			return true;
 		}
 	}
 
